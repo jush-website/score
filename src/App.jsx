@@ -26,17 +26,22 @@ const App = () => {
     }
   }, []);
 
-  const studentData = [
+const studentData = [
     { id: "B11111025", name: "洪昕妤", score: 86 },
     { id: "B11356031", name: "蕭睿騰", score: 40 },
     { id: "B11356001", name: "施景維", score: 63 },
     { id: "B11356032", name: "王育騰", score: 49 },
     { id: "B11356002", name: "鍾昀璋", score: 54 },
     { id: "B11356033", name: "林永富", score: 38 },
+    { id: "B11356003", name: "林書瑋", score: 54 },
     { id: "B11356035", name: "陳嘉錡", score: 47 },
+    { id: "B11356004", name: "蔡秉澄", score: 49 },
     { id: "B11356036", name: "鄭文傑", score: 46 },
+    { id: "B11356005", name: "廖右程", score: 55 },
     { id: "B11356038", name: "林政宏", score: 84 },
+    { id: "B11356006", name: "許永誠", score: 54 },
     { id: "B11356039", name: "蔡乃如", score: 72 },
+    { id: "B11356007", name: "張芯語", score: 57 },
     { id: "B11356040", name: "蔡翌佳", score: 84 },
     { id: "B11356008", name: "葉承杰", score: 75 },
     { id: "B11356041", name: "黃昱琦", score: 66 },
@@ -60,6 +65,7 @@ const App = () => {
     { id: "B11356051", name: "陳品婕", score: 70 },
     { id: "B11356020", name: "張佩芩", score: 72 },
     { id: "B11356052", name: "王佑程", score: 51 },
+    { id: "B11356021", name: "熊婉其", score: 58 },
     { id: "B11356053", name: "陳錦楓", score: 47 },
     { id: "B11356022", name: "洪偉強", score: 49 },
     { id: "B11356054", name: "張惠淨", score: 79 },
@@ -67,6 +73,7 @@ const App = () => {
     { id: "B11356057", name: "紀曼臻", score: 60 },
     { id: "B11356024", name: "陳長岳", score: 38 },
     { id: "B11356058", name: "王又正", score: 83 },
+    { id: "B11356025", name: "余旻恩", score: 74 },
     { id: "B11356059", name: "陳佳榮", score: 55 },
     { id: "B11356026", name: "歐丞儒", score: 82 },
     { id: "B11356027", name: "李宗穎", score: 68 },
