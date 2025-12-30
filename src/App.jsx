@@ -1,7 +1,9 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Search, User, Hash, GraduationCap, AlertCircle, Info, CheckCircle2 } from 'lucide-react';
 
-// 從 PDF 提取的學生成績資料
+const App = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+
 const studentData = [
     { id: "B11111025", name: "洪昕妤", score: 86 },
     { id: "B11356031", name: "蕭睿騰", score: 40 },
@@ -59,40 +61,6 @@ const studentData = [
     { id: "B11356030", name: "黃亭瑜", score: 64 },
   ];
 
-const App = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-
-  useEffect(() => {
-    // 1. 強制注入 Viewport Meta - 這是解決手機顯示問題的關鍵
-    if (!document.querySelector('meta[name="viewport"]')) {
-      const meta = document.createElement('meta');
-      meta.name = "viewport";
-      meta.content = "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0";
-      document.head.appendChild(meta);
-    }
-
-    // 2. 注入 Tailwind CDN - 確保即便沒有 index.css 也能運作
-    if (!document.getElementById('tailwind-cdn')) {
-      const script = document.createElement('script');
-      script.id = 'tailwind-cdn';
-      script.src = 'https://cdn.tailwindcss.com';
-      document.head.appendChild(script);
-    }
-
-    // 3. 注入基本樣式重置 - 防止手機版預設樣式干擾
-    const styleId = 'global-fix-style';
-    if (!document.getElementById(styleId)) {
-      const style = document.createElement('style');
-      style.id = styleId;
-      style.innerHTML = `
-        body { margin: 0; padding: 0; background-color: #f8fafc; font-family: sans-serif; -webkit-tap-highlight-color: transparent; }
-        input { font-size: 16px !important; } /* iOS 防止輸入時放大縮小 */
-      `;
-      document.head.appendChild(style);
-    }
-  }, []);
-
-  // 查詢邏輯：精確匹配 9 碼或姓名
   const result = useMemo(() => {
     const term = searchTerm.trim().toUpperCase();
     if (!term) return null;
@@ -100,92 +68,196 @@ const App = () => {
   }, [searchTerm]);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center p-6 sm:p-12 antialiased">
-      {/* 標題區域 */}
-      <div className="w-full max-w-md text-center mt-4 mb-10">
-        <div className="inline-flex p-4 bg-indigo-600 rounded-[2rem] shadow-2xl shadow-indigo-100 mb-6 transform rotate-3 hover:rotate-0 transition-transform">
-          <GraduationCap className="text-white w-10 h-10" />
+    <div className="container">
+      {/* 直接注入 CSS 樣式塊 */}
+      <style>{`
+        .container {
+          min-height: 100vh;
+          background-color: #f0f2f5;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 40px 20px;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          box-sizing: border-box;
+        }
+        .header {
+          text-align: center;
+          margin-bottom: 30px;
+        }
+        .icon-box {
+          background-color: #4f46e5;
+          padding: 15px;
+          border-radius: 20px;
+          display: inline-flex;
+          box-shadow: 0 10px 20px rgba(79, 70, 229, 0.2);
+          margin-bottom: 15px;
+        }
+        .title {
+          font-size: 28px;
+          font-weight: 900;
+          color: #1e293b;
+          margin: 0;
+        }
+        .subtitle {
+          color: #64748b;
+          margin-top: 5px;
+          font-size: 14px;
+          font-weight: 600;
+          letter-spacing: 1px;
+        }
+        .search-wrapper {
+          width: 100%;
+          max-width: 400px;
+          position: relative;
+        }
+        .search-input {
+          width: 100%;
+          padding: 18px 20px 18px 50px;
+          border-radius: 18px;
+          border: none;
+          background: white;
+          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+          font-size: 16px;
+          font-weight: 600;
+          outline: none;
+          box-sizing: border-box;
+        }
+        .search-icon {
+          position: absolute;
+          left: 18px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #4f46e5;
+        }
+        .info-text {
+          font-size: 11px;
+          color: #94a3b8;
+          margin-top: 10px;
+          text-align: left;
+          width: 100%;
+          max-width: 400px;
+          padding-left: 10px;
+        }
+        .result-card {
+          width: 100%;
+          max-width: 400px;
+          background: white;
+          margin-top: 30px;
+          border-radius: 30px;
+          padding: 30px;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+          animation: slideUp 0.5s ease-out;
+        }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .score-box {
+          background: #1e293b;
+          color: white;
+          border-radius: 20px;
+          padding: 20px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-top: 20px;
+        }
+        .score-value {
+          font-size: 48px;
+          font-weight: 900;
+          font-style: italic;
+        }
+        .id-badge {
+          background: #f1f5f9;
+          padding: 4px 10px;
+          border-radius: 10px;
+          font-family: monospace;
+          font-size: 13px;
+          color: #64748b;
+        }
+        .not-found {
+          text-align: center;
+          background: white;
+          padding: 40px;
+          border-radius: 30px;
+          margin-top: 30px;
+          width: 100%;
+          max-width: 400px;
+          box-sizing: border-box;
+        }
+        /* 手機版優化 */
+        @media (max-width: 480px) {
+          .title { font-size: 24px; }
+          .container { padding: 30px 15px; }
+        }
+      `}</style>
+
+      {/* 標題 */}
+      <div className="header">
+        <div className="icon-box">
+          <GraduationCap color="white" size={32} />
         </div>
-        <h1 className="text-4xl font-black text-slate-900 tracking-tight">成績查詢系統</h1>
-        <p className="text-slate-500 mt-2 font-bold tracking-widest text-xs uppercase">114-1 Data Structure Final</p>
+        <h1 className="title">成績查詢系統</h1>
+        <p className="subtitle">114-1 資料結構期末考</p>
       </div>
 
-      {/* 搜尋組件 */}
-      <div className="w-full max-w-md space-y-4">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-indigo-500">
-            <Search size={22} strokeWidth={3} />
+      {/* 搜尋 */}
+      <div className="search-wrapper">
+        <Search className="search-icon" size={20} />
+        <input
+          className="search-input"
+          type="text"
+          placeholder="輸入 9 碼學號或完整姓名"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+      <div className="info-text">
+        <Info size={10} style={{marginRight: 4}} />
+        請輸入完整資訊以保護隱私
+      </div>
+
+      {/* 結果 */}
+      {searchTerm.trim() !== '' && (
+        result ? (
+          <div className="result-card">
+            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: 20}}>
+              <div>
+                <div style={{fontSize: 10, fontWeight: 800, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: 2}}>Student</div>
+                <div style={{fontSize: 28, fontWeight: 900, color: '#334155'}}>{result.name}</div>
+              </div>
+              <div style={{textAlign: 'right'}}>
+                <div style={{fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 2}}>ID Number</div>
+                <div className="id-badge">{result.id}</div>
+              </div>
+            </div>
+
+            <div className="score-box">
+              <div>
+                <div style={{fontSize: 14, color: '#94a3b8', fontWeight: 600}}>期末考試成績</div>
+                <div style={{display: 'flex', alignItems: 'center', gap: 5, color: '#818cf8', fontSize: 10, fontWeight: 800, marginTop: 4}}>
+                  <CheckCircle2 size={12} /> VERIFIED
+                </div>
+              </div>
+              <div className="score-value" style={{color: result.score >= 60 ? '#818cf8' : '#f87171'}}>
+                {result.score}
+              </div>
+            </div>
           </div>
-          <input
-            type="text"
-            placeholder="請輸入完整 9 碼學號或姓名"
-            className="w-full pl-16 pr-6 py-5 bg-white border-none rounded-[1.5rem] shadow-xl shadow-slate-200/60 focus:ring-4 focus:ring-indigo-500/10 transition-all text-lg font-bold text-slate-800 placeholder:text-slate-300"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-
-        <div className="flex items-center gap-2 px-6 text-slate-400">
-          <Info size={14} className="text-indigo-400" />
-          <p className="text-[10px] font-black uppercase tracking-widest">系統僅顯示完全匹配之結果</p>
-        </div>
-
-        {/* 結果卡片 */}
-        <div className="mt-8">
-          {!searchTerm.trim() ? (
-            <div className="bg-white/40 border-2 border-dashed border-slate-200 rounded-[2rem] p-12 text-center">
-              <p className="text-slate-400 font-bold text-sm">請輸入學號進行查詢</p>
+        ) : (
+          searchTerm.length >= 2 && (
+            <div className="not-found">
+              <AlertCircle size={40} color="#fecdd3" style={{marginBottom: 15}} />
+              <div style={{fontWeight: 800, fontSize: 18, color: '#1e293b'}}>查無資料</div>
+              <p style={{fontSize: 13, color: '#94a3b8', marginTop: 8}}>請確認輸入的是完整學號或姓名</p>
             </div>
-          ) : result ? (
-            <div className="bg-white rounded-[2.5rem] p-8 shadow-2xl shadow-indigo-900/10 border border-slate-100 animate-in fade-in zoom-in duration-500">
-              <div className="flex justify-between items-start mb-10">
-                <div>
-                  <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1 block">Identification</span>
-                  <h2 className="text-3xl font-black text-slate-800 tracking-tighter">{result.name}</h2>
-                </div>
-                <div className="text-right">
-                  <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1 block">Student ID</span>
-                  <div className="bg-slate-50 px-3 py-1 rounded-xl text-sm font-mono font-bold text-slate-500 border border-slate-100">
-                    {result.id}
-                  </div>
-                </div>
-              </div>
+          )
+        )
+      )}
 
-              <div className="bg-slate-900 rounded-[2rem] p-8 text-white relative overflow-hidden shadow-2xl">
-                <div className="relative z-10 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-400">期末考試成績</h3>
-                    <div className="flex items-center gap-1.5 mt-2 text-indigo-400 font-black text-[10px] uppercase tracking-widest">
-                      <CheckCircle2 size={12} />
-                      Academic Pass
-                    </div>
-                  </div>
-                  <div className={`text-6xl font-black italic tracking-tighter ${result.score >= 60 ? 'text-indigo-400' : 'text-rose-400'}`}>
-                    {result.score}
-                  </div>
-                </div>
-                {/* 裝飾背景數字 */}
-                <div className="absolute -right-6 -bottom-10 text-[10rem] font-black text-white/5 select-none pointer-events-none italic">
-                  {result.score}
-                </div>
-              </div>
-            </div>
-          ) : (
-            searchTerm.length >= 2 && (
-              <div className="bg-white rounded-[2rem] p-10 text-center border border-slate-100 shadow-xl animate-in fade-in duration-300">
-                <AlertCircle size={48} className="mx-auto text-rose-100 mb-4" strokeWidth={2.5} />
-                <h3 className="text-xl font-black text-slate-800">未找到相符資料</h3>
-                <p className="text-slate-400 mt-2 text-xs font-bold leading-relaxed">
-                  請確認輸入的是完整 <span className="text-indigo-500">9 碼學號</span><br/>或是正確的姓名
-                </p>
-              </div>
-            )
-          )}
-        </div>
-      </div>
-
-      <footer className="mt-auto pt-16 text-slate-300 text-[10px] font-black tracking-[0.4em] uppercase">
-        © 2025 Computer Science
+      <footer style={{marginTop: 'auto', paddingTop: 40, color: '#cbd5e1', fontSize: 10, fontWeight: 800, letterSpacing: 3}}>
+        CS DEPARTMENT 2025
       </footer>
     </div>
   );
