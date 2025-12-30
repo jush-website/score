@@ -55,7 +55,7 @@ const studentData = [
     { id: "B11356046", name: "王乙臻", score: 32 },
     { id: "B11356014", name: "吳韋臻", score: 67 },
     { id: "B11356047", name: "朱育宏", score: 76 },
-    { id: "B11356015", name: "陳駿宏", score: 0 },
+    { id: "B11356015", name: "陳駿宏", score: "需補考" },
     { id: "B11356048", name: "胡冠軒", score: 63 },
     { id: "B11356016", name: "歐陽品臻", score: 80 },
     { id: "B11356049", name: "宋妮潔", score: 55 },
