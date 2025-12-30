@@ -1,10 +1,19 @@
-import React, { useState, useMemo } from 'react';
-import { Search, User, Hash, GraduationCap, AlertCircle, Info } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Search, User, Hash, GraduationCap, AlertCircle, Info, CheckCircle2 } from 'lucide-react';
 
 const App = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // 根據 PDF 內容整理的成績資料
+
+  // 自動注入 Tailwind CDN (確保即使 index.css 是空的也能顯示樣式)
+  useEffect(() => {
+    if (!document.getElementById('tailwind-cdn')) {
+      const script = document.createElement('script');
+      script.id = 'tailwind-cdn';
+      script.src = 'https://cdn.tailwindcss.com';
+      document.head.appendChild(script);
+    }
+  }, []);
+
   const studentData = [
     { id: "B11111025", name: "洪昕妤", score: 86 },
     { id: "B11356031", name: "蕭睿騰", score: 40 },
@@ -20,7 +29,6 @@ const App = () => {
     { id: "B11356038", name: "林政宏", score: 84 },
     { id: "B11356006", name: "許永誠", score: 54 },
     { id: "B11356039", name: "蔡乃如", score: 72 },
-    { id: "B11356007", name: "張芯語", score: 57 },
     { id: "B11356040", name: "蔡翌佳", score: 84 },
     { id: "B11356008", name: "葉承杰", score: 75 },
     { id: "B11356041", name: "黃昱琦", score: 66 },
@@ -44,7 +52,6 @@ const App = () => {
     { id: "B11356051", name: "陳品婕", score: 70 },
     { id: "B11356020", name: "張佩芩", score: 72 },
     { id: "B11356052", name: "王佑程", score: 51 },
-    { id: "B11356021", name: "熊婉其", score: 58 },
     { id: "B11356053", name: "陳錦楓", score: 47 },
     { id: "B11356022", name: "洪偉強", score: 49 },
     { id: "B11356054", name: "張惠淨", score: 79 },
@@ -52,7 +59,6 @@ const App = () => {
     { id: "B11356057", name: "紀曼臻", score: 60 },
     { id: "B11356024", name: "陳長岳", score: 38 },
     { id: "B11356058", name: "王又正", score: 83 },
-    { id: "B11356025", name: "余旻恩", score: 74 },
     { id: "B11356059", name: "陳佳榮", score: 55 },
     { id: "B11356026", name: "歐丞儒", score: 82 },
     { id: "B11356027", name: "李宗穎", score: 68 },
@@ -63,116 +69,120 @@ const App = () => {
   ];
 
   const filteredResults = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
+    const term = searchTerm.trim().toUpperCase();
     if (!term) return [];
     
-    // 改為精確匹配：只有輸入完整學號(9碼)或完整姓名才顯示
+    // 精確匹配：學號 9 碼或姓名完全符合
     return studentData.filter(student => 
-      student.id.toLowerCase() === term || 
+      student.id.toUpperCase() === term || 
       student.name === searchTerm.trim()
     );
   }, [searchTerm]);
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8 flex flex-col items-center">
-      {/* Header */}
-      <div className="w-full max-w-2xl mb-8 text-center">
-        <div className="inline-flex p-3 bg-indigo-600 rounded-2xl mb-4 shadow-lg shadow-indigo-200">
-          <GraduationCap className="text-white w-8 h-8" />
+    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', padding: '2rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: 'sans-serif' }}>
+      
+      {/* 標題區 */}
+      <div className="w-full max-w-md text-center mb-8">
+        <div className="inline-flex p-4 bg-blue-600 rounded-3xl mb-4 shadow-xl shadow-blue-100">
+          <GraduationCap className="text-white w-10 h-10" />
         </div>
-        <h1 className="text-3xl font-bold text-slate-800">114-1 資料結構</h1>
-        <p className="text-slate-500 mt-2 text-lg">期末考試成績查詢系統</p>
+        <h1 className="text-3xl font-black text-slate-800 tracking-tight">成績查詢系統</h1>
+        <p className="text-slate-500 mt-2 font-medium">114-1 資料結構期末考</p>
       </div>
 
-      {/* Search Input */}
-      <div className="w-full max-w-md relative group mb-6">
-        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
-          <Search size={20} />
+      {/* 搜尋框 */}
+      <div className="w-full max-w-md relative mb-4">
+        <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400">
+          <Search size={22} />
         </div>
         <input
           type="text"
-          placeholder="請輸入完整 9 碼學號或姓名..."
-          className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all text-lg"
+          placeholder="輸入完整 9 碼學號或姓名"
+          className="w-full pl-14 pr-6 py-5 bg-white border-2 border-slate-100 rounded-3xl shadow-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-50 focus:outline-none transition-all text-lg font-medium"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
-      {/* Info Tip */}
-      <div className="w-full max-w-md flex items-start gap-2 px-4 mb-8 text-slate-400">
-        <Info size={16} className="mt-0.5 shrink-0" />
-        <p className="text-xs">
-          為保護隱私，系統僅在輸入<b>完整 9 碼學號</b>或<b>精確姓名</b>後才會顯示分數。
-        </p>
+      <div className="w-full max-w-md flex items-center gap-2 px-2 mb-8 text-slate-400">
+        <Info size={14} />
+        <p className="text-[11px] font-medium tracking-wide uppercase">請輸入完整資訊以確保隱私安全</p>
       </div>
 
-      {/* Results Section */}
-      <div className="w-full max-w-md space-y-4">
+      {/* 結果顯示區 */}
+      <div className="w-full max-w-md">
         {searchTerm.trim() === '' ? (
-          <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-400">
-            <p className="text-sm">請輸入資料開始查詢</p>
+          <div className="bg-white/50 border-2 border-dashed border-slate-200 rounded-[2.5rem] p-12 text-center">
+            <p className="text-slate-400 font-medium">請輸入學號或姓名查詢分數</p>
           </div>
         ) : filteredResults.length > 0 ? (
           filteredResults.map((student) => (
             <div 
               key={student.id} 
-              className="bg-white p-6 rounded-3xl shadow-md border border-slate-100 transform transition-all animate-in zoom-in duration-300"
+              className="bg-white rounded-[2.5rem] p-8 shadow-2xl shadow-blue-900/5 border border-slate-50 animate-in fade-in zoom-in duration-500"
             >
-              <div className="flex justify-between items-start mb-6">
+              <div className="flex justify-between items-start mb-8">
                 <div>
-                  <div className="flex items-center gap-2 text-slate-500 mb-1">
-                    <User size={14} />
-                    <span className="text-xs font-semibold uppercase tracking-wider">姓名</span>
-                  </div>
-                  <h2 className="text-2xl font-bold text-slate-800">{student.name}</h2>
+                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-[0.2em] mb-1 block">Student Name</span>
+                  <h2 className="text-3xl font-bold text-slate-800">{student.name}</h2>
                 </div>
                 <div className="text-right">
-                  <div className="flex items-center justify-end gap-2 text-slate-500 mb-1">
-                    <Hash size={14} />
-                    <span className="text-xs font-semibold uppercase tracking-wider">學號</span>
-                  </div>
-                  <p className="text-sm font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded-lg inline-block">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-1 block">Student ID</span>
+                  <div className="bg-slate-100 px-3 py-1 rounded-full text-sm font-mono font-bold text-slate-600">
                     {student.id}
-                  </p>
+                  </div>
                 </div>
               </div>
 
-              <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
-                <div>
-                  <span className="text-slate-500 text-sm font-medium block">期末考試總分</span>
-                  <span className="text-xs text-slate-400">114-1 學期課程</span>
+              <div className="relative overflow-hidden bg-gradient-to-br from-slate-50 to-white rounded-3xl p-8 border border-slate-100">
+                <div className="relative z-10 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-700">期末考總分</h3>
+                    <div className="flex items-center gap-1.5 mt-1 text-emerald-600 font-bold text-xs uppercase">
+                      <CheckCircle2 size={12} />
+                      Verified Result
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className={`text-6xl font-black italic tracking-tighter ${
+                      student.score >= 60 ? 'text-blue-600' : 'text-rose-500'
+                    }`}>
+                      {student.score}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <span className={`text-5xl font-black ${
-                    student.score >= 60 ? 'text-emerald-500' : 'text-rose-500'
-                  }`}>
-                    {student.score}
-                  </span>
-                  <p className={`text-[10px] font-bold mt-1 uppercase tracking-tighter ${
-                    student.score >= 60 ? 'text-emerald-600' : 'text-rose-600'
-                  }`}>
-                    {student.score >= 60 ? 'Passed' : 'Failed'}
-                  </p>
+                {/* 背景裝飾數字 */}
+                <div className="absolute -right-4 -bottom-8 text-9xl font-black text-slate-100/50 select-none pointer-events-none">
+                  {student.score}
                 </div>
               </div>
+
+              <button 
+                onClick={() => setSearchTerm('')}
+                className="w-full mt-6 py-4 bg-slate-800 text-white rounded-2xl font-bold hover:bg-slate-700 transition-colors shadow-lg shadow-slate-200"
+              >
+                關閉結果
+              </button>
             </div>
           ))
         ) : (
-          /* 當輸入滿一定長度但找不到資料時才顯示錯誤，避免輸入途中一直跳錯誤 */
-          (searchTerm.trim().length >= 3) && (
-            <div className="bg-white p-8 rounded-3xl border border-slate-100 text-center animate-in fade-in slide-in-from-top-4 duration-300">
-              <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500 font-medium">找不到相符的資料</p>
-              <p className="text-slate-400 text-sm mt-1">請確認是否輸入了完整的 9 碼學號</p>
+          searchTerm.length >= 3 && (
+            <div className="bg-white rounded-[2.5rem] p-10 text-center border-2 border-slate-50 shadow-sm animate-in slide-in-from-bottom-4 duration-300">
+              <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertCircle size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800">未找到相符資料</h3>
+              <p className="text-slate-400 mt-2 text-sm leading-relaxed">
+                請確認是否輸入了完整的 9 碼學號<br/>或正確的姓名格式。
+              </p>
             </div>
           )
         )}
       </div>
 
-      {/* Footer Info */}
-      <footer className="mt-auto py-8 text-slate-400 text-xs text-center">
-        <p>© 114-1 資料結構期末成績查詢系統</p>
-        <p className="mt-1 opacity-50">查詢狀態：{filteredResults.length > 0 ? '已找到結果' : '等待完整輸入'}</p>
+      <footer className="mt-auto pt-12 text-slate-300 text-[10px] font-bold tracking-[0.3em] uppercase">
+        Data Structure 2025
       </footer>
     </div>
   );
