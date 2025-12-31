@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 // Google Apps Script API 網址
-const API_BASE_URL = "https://script.google.com/macros/s/AKfycbzoJC30nR0TgW_t--bs_TXwy54CsadsVjyt-cz5zGjJgAZkBU_8U4ve9QOgDYxGxtVa/exec";
+const API_BASE_URL = "https://script.google.com/macros/s/AKfycbzTUO_rRZh6fRz95M4zc7ewk0lmfPbyAVezsVKIKbQbXJBPoGHnZc4JnGmbCkRM2l7d/exec";
 
 // 您的試算表連結
 const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1O22jKgoSb_qk2ItORCbhRCUikmlS4tO5LOx8wS81H6Y/edit?usp=sharing";
