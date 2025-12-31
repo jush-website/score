@@ -95,7 +95,7 @@ const App = () => {
         setDeletedSubjects(prev => prev.filter(d => cloudSheets.includes(d.name)));
       }
     } catch (err) {
-      console.error("初始化同步失敗:", err);
+      console.error("同步失敗:", err);
     } finally {
       setIsSyncing(false);
     }
@@ -120,7 +120,7 @@ const App = () => {
         throw new Error("回傳資料格式異常");
       }
     } catch (err) {
-      setError("連線失敗。請確認權限為『任何人』存取，或稍後重試。");
+      setError("連線失敗。請點擊重新整理或稍後重試。");
     } finally {
       setLoading(false);
     }
@@ -133,11 +133,11 @@ const App = () => {
     }
   }, [subject, isAdminMode]);
 
-  // 手動點擊重新整理按鈕
+  // 手動點擊重新整理按鈕 (保持在目前 Mode)
   const handleManualRefresh = async () => {
     await initialSync(); // 同步清單(處理刪除)
-    if (subject) {
-      await fetchData(subject); // 同步目前資料
+    if (subject && !isAdminMode) {
+      await fetchData(subject); // 若在查詢頁，同步目前分數
     }
   };
 
@@ -245,7 +245,7 @@ const App = () => {
     .refresh-btn:active { transform: scale(0.9); }
 
     .header-ui { text-align: center; margin-bottom: 32px; width: 100%; display: flex; flex-direction: column; align-items: center; }
-    .header-row { display: flex; align-items: center; justify-content: center; margin-bottom: 8px; }
+    .header-row { display: flex; align-items: center; justify-content: center; margin-bottom: 8px; width: 100%; position: relative; }
     .logo-ui {
       background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
       width: 56px; height: 56px; border-radius: 20px; display: flex; 
@@ -290,13 +290,18 @@ const App = () => {
       padding: 24px; display: flex; justify-content: space-between; align-items: center; margin-top: 20px;
     }
     .score-val-ui { font-size: 42px; font-weight: 900; }
+    
     .admin-btn {
       padding: 14px; border: none; border-radius: 14px; font-weight: 700; cursor: pointer;
       display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+      width: 100%; box-sizing: border-box; font-size: 15px;
     }
     .admin-btn.primary { background: #4f46e5; color: white; }
     .admin-btn.secondary { background: #f1f5f9; color: #64748b; }
-    .admin-btn:disabled { opacity: 0.5; }
+    .admin-btn.success { background: #059669; color: white; }
+    .admin-btn:hover { filter: brightness(1.05); transform: translateY(-1px); }
+    .admin-btn:active { transform: scale(0.98); }
+    .admin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .spin { animation: spin 1s linear infinite; }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -310,6 +315,7 @@ const App = () => {
 
   // --- 畫面渲染 ---
 
+  // 管理員登入畫面
   if (isAdminMode && !isLoggedIn) {
     return (
       <div className="app-main">
@@ -327,20 +333,27 @@ const App = () => {
     );
   }
 
+  // 管理員控制台
   if (isAdminMode && isLoggedIn) {
     return (
       <div className="app-main">
         <style>{appStyles}</style>
         <div className="header-ui">
           <div className="logo-ui" style={{background: '#1e293b'}}><Settings color="white" size={30} /></div>
-          <h1 style={{fontSize: '24px', fontWeight: 900, margin: 0}}>管理後台</h1>
+          <div className="header-row">
+            <h1 style={{fontSize: '24px', fontWeight: 900, margin: 0}}>管理後台</h1>
+            <button className="refresh-btn" onClick={handleManualRefresh} disabled={isSyncing} title="同步雲端清單">
+              <RotateCw size={20} className={isSyncing ? 'spin' : ''} />
+            </button>
+          </div>
+          <p style={{color: '#64748b', fontSize: '11px', fontWeight: 800, marginTop: '4px'}}>SETTINGS & CLOUD SYNC</p>
         </div>
 
         <div className="card-ui">
           <h3 style={{fontSize: '15px', fontWeight: 800, marginBottom: '12px'}}>建立新分頁</h3>
           <div style={{display: 'flex', gap: '10px', marginBottom: '32px'}}>
             <input type="text" className="search-ui-input" style={{paddingLeft: '20px', fontSize: '14px'}} placeholder="Sheet 名稱" value={newSubjectName} disabled={isCreating} onChange={(e) => setNewSubjectName(e.target.value)} />
-            <button className="admin-btn primary" style={{width: '70px'}} onClick={addSubject} disabled={isCreating}>{isCreating ? <Loader2 className="spin" size={18} /> : "建立"}</button>
+            <button className="admin-btn primary" style={{width: '70px', padding: '10px'}} onClick={addSubject} disabled={isCreating}>{isCreating ? <Loader2 className="spin" size={18} /> : "建立"}</button>
           </div>
 
           <h3 style={{fontSize: '15px', fontWeight: 800, marginBottom: '12px'}}>目前科目 (已同步雲端)</h3>
@@ -358,6 +371,7 @@ const App = () => {
                 </div>
               </div>
             ))}
+            {subjectsConfig.length === 0 && <p style={{textAlign: 'center', color: '#94a3b8', fontSize: '13px', padding: '20px'}}>雲端清單為空，請點擊上方重新整理或建立新分頁</p>}
           </div>
 
           {deletedSubjects.length > 0 && (
@@ -372,15 +386,31 @@ const App = () => {
             </div>
           )}
 
-          <div style={{marginTop: '32px'}}>
-            <a href={SPREADSHEET_URL} target="_blank" rel="noopener noreferrer" className="admin-btn" style={{ background: '#059669', color: 'white', textDecoration: 'none', gap: '8px', width: '100%', marginBottom: '12px' }}><ExternalLink size={18} /> 開啟 Google 試算表</a>
-            <button className="admin-btn secondary" style={{width: '100%', gap: '8px'}} onClick={() => {setIsAdminMode(false); setIsLoggedIn(false);}}><LogOut size={18} /> 退出後台</button>
+          <div style={{marginTop: '32px', display: 'flex', flexDirection: 'column', gap: '12px'}}>
+            <a 
+              href={SPREADSHEET_URL} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="admin-btn success"
+              style={{ textDecoration: 'none', gap: '8px' }}
+            >
+              <ExternalLink size={18} /> 開啟 Google 試算表編輯
+            </a>
+            
+            <button 
+              className="admin-btn secondary" 
+              style={{ gap: '8px' }} 
+              onClick={() => {setIsAdminMode(false); setIsLoggedIn(false);}}
+            >
+              <LogOut size={18} /> 退出後台
+            </button>
           </div>
         </div>
       </div>
     );
   }
 
+  // 使用者查詢畫面
   const visibleSubjects = subjectsConfig.filter(s => s.isVisible);
 
   return (
@@ -402,7 +432,7 @@ const App = () => {
             <RotateCw size={20} className={(loading || isSyncing) ? 'spin' : ''} />
           </button>
         </div>
-        <p style={{color: '#64748b', fontSize: '11px', fontWeight: 800, letterSpacing: '2px', marginTop: '6px', textTransform: 'uppercase'}}>Academic Portal v4.3</p>
+        <p style={{color: '#64748b', fontSize: '11px', fontWeight: 800, letterSpacing: '2px', marginTop: '6px', textTransform: 'uppercase'}}>Academic Portal v4.4</p>
       </div>
 
       {visibleSubjects.length > 0 ? (
@@ -415,13 +445,13 @@ const App = () => {
           ))}
         </div>
       ) : (
-        <div className="card-ui" style={{textAlign: 'center', color: '#94a3b8'}}>目前暫無開放查詢的科目</div>
+        <div className="card-ui" style={{textAlign: 'center', color: '#94a3b8', padding: '40px'}}>目前暫無開放查詢的科目</div>
       )}
 
       {loading || isSyncing ? (
         <div style={{marginTop: '80px', textAlign: 'center'}}>
           <Loader2 className="spin" size={42} color="#4f46e5" />
-          <p style={{marginTop: '16px', fontWeight: 700, color: '#4f46e5'}}>正在同步雲端資料...</p>
+          <p style={{marginTop: '16px', fontWeight: 700, color: '#4f46e5'}}>正在同步雲端資料庫...</p>
         </div>
       ) : error ? (
         <div className="card-ui" style={{border: '1.5px solid #fee2e2', background: '#fffcfc'}}>
@@ -451,7 +481,7 @@ const App = () => {
                     <h2 style={{fontSize: '28px', fontWeight: 900, margin: 0}}>{queryResult.姓名 ?? queryResult.name}</h2>
                   </div>
                   <div style={{textAlign: 'right'}}>
-                    <div style={{display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '5px', marginBottom: '4px'}}>
+                    <div style={{display: 'flex', alignItems: 'center', justifyToken: 'flex-end', gap: '5px', marginBottom: '4px'}}>
                        <span style={{fontSize: '10px', color: '#94a3b8', fontWeight: 800}}>Student ID</span>
                        <Hash size={10} color="#94a3b8" />
                     </div>
@@ -461,10 +491,10 @@ const App = () => {
 
                 <div className="score-display-box">
                   <div>
-                    <p style={{fontSize: '14px', color: '#94a3b8', fontWeight: 700, margin: 0}}>{subject} 期末成績</p>
+                    <p style={{fontSize: '14px', color: '#94a3b8', fontWeight: 700, margin: 0}}>{subject} 成績</p>
                     <div style={{display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontSize: '10px', fontWeight: 800, marginTop: '8px'}}>
                       <CheckCircle2 size={12} color={isPassed ? '#4ade80' : '#fb7185'} /> 
-                      GOOGLE SHEET SYNCED
+                      CLOUDSYNC VERIFIED
                     </div>
                   </div>
                   <div className="score-val-ui" style={{ color: isPassed ? '#4ade80' : '#ef4444', textShadow: isPassed ? '0 0 20px rgba(74, 222, 128, 0.4)' : '0 0 20px rgba(239, 68, 68, 0.4)' }}>
