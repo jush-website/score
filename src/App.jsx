@@ -352,7 +352,7 @@ const App = () => {
         <div className="card-ui">
           <h3 style={{fontSize: '15px', fontWeight: 800, marginBottom: '12px'}}>建立新分頁</h3>
           <div style={{display: 'flex', gap: '10px', marginBottom: '32px'}}>
-            <input type="text" className="search-ui-input" style={{paddingLeft: '20px', fontSize: '14px'}} placeholder="Sheet 名稱" value={newSubjectName} disabled={isCreating} onChange={(e) => setNewSubjectName(e.target.value)} />
+            <input type="text" className="search-ui-input" style={{paddingLeft: '20px', fontSize: '14px'}} placeholder="輸入新工作表名稱" value={newSubjectName} disabled={isCreating} onChange={(e) => setNewSubjectName(e.target.value)} />
             <button className="admin-btn primary" style={{width: '70px', padding: '10px'}} onClick={addSubject} disabled={isCreating}>{isCreating ? <Loader2 className="spin" size={18} /> : "建立"}</button>
           </div>
 
