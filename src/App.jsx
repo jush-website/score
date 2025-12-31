@@ -441,7 +441,7 @@ const App = () => {
 
           <div className="info-tip">
             <Info size={14} color="#6366f1" style={{flexShrink: 0, marginTop: '1px'}} />
-            <p className="info-tip-text">資料與雲端同步中。若 Google Sheet 有更動，請點擊上方重新整理按鈕。</p>
+            
           </div>
 
           {searchTerm.trim() !== '' ? (
