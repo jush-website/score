@@ -423,7 +423,7 @@ const App = () => {
         <div className="logo-ui"><GraduationCap color="white" size={30} /></div>
         <div className="header-row">
           <h1 style={{fontSize: '24px', fontWeight: 900, margin: 0, letterSpacing: '-0.5px'}}>Minar成績查詢</h1>
-          <h2 style={{fontSize: '24px', fontWeight: 900, margin: 0, letterSpacing: '-0.5px'}}>系統為龔旭陽實驗室所有，仿冒必究</h2>
+          
           <button 
             className="refresh-btn" 
             onClick={handleManualRefresh} 
@@ -432,6 +432,9 @@ const App = () => {
           >
             <RotateCw size={20} className={(loading || isSyncing) ? 'spin' : ''} />
           </button>
+        </div>
+        <div>
+          <h2 style={{fontSize: '24px', fontWeight: 900, margin: 0, letterSpacing: '-0.5px'}}>系統為龔旭陽實驗室所有，仿冒必究</h2>
         </div>
       </div>
 
