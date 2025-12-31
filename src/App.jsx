@@ -2,11 +2,12 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Search, GraduationCap, AlertCircle, Info, CheckCircle2, 
   Loader2, BookOpen, Cpu, RefreshCw, ShieldAlert, 
-  User, Hash, Lock, Eye, EyeOff, Plus, Trash2, X, Settings, LogOut, Save, ExternalLink
+  User, Hash, Lock, Eye, EyeOff, Plus, Trash2, X, Settings, 
+  LogOut, Save, ExternalLink, RotateCcw, Archive
 } from 'lucide-react';
 
 // Google Apps Script API 網址
-const API_BASE_URL = "https://script.google.com/macros/s/AKfycbzTUO_rRZh6fRz95M4zc7ewk0lmfPbyAVezsVKIKbQbXJBPoGHnZc4JnGmbCkRM2l7d/exec";
+const API_BASE_URL = "https://script.google.com/macros/s/AKfycbzoJC30nR0TgW_t--bs_TXwy54CsadsVjyt-cz5zGjJgAZkBU_8U4ve9QOgDYxGxtVa/exec";
 
 // 您的試算表連結
 const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1O22jKgoSb_qk2ItORCbhRCUikmlS4tO5LOx8wS81H6Y/edit?usp=sharing";
@@ -24,6 +25,8 @@ const App = () => {
 
   // --- 後台管理狀態 ---
   const [isCreating, setIsCreating] = useState(false);
+  
+  // 目前顯示中的工作表
   const [subjectsConfig, setSubjectsConfig] = useState(() => {
     const saved = localStorage.getItem('app_subjects_config');
     return saved ? JSON.parse(saved) : [
@@ -31,17 +34,25 @@ const App = () => {
       { id: '2', name: '物聯網', isVisible: true }
     ];
   });
+
+  // 已刪除的工作表 (回收站)
+  const [deletedSubjects, setDeletedSubjects] = useState(() => {
+    const saved = localStorage.getItem('app_deleted_subjects');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [newSubjectName, setNewSubjectName] = useState('');
 
   // 監聽配置變化並存入 LocalStorage
   useEffect(() => {
     localStorage.setItem('app_subjects_config', JSON.stringify(subjectsConfig));
+    localStorage.setItem('app_deleted_subjects', JSON.stringify(deletedSubjects));
     
     const visibleSubjects = subjectsConfig.filter(s => s.isVisible);
     if (visibleSubjects.length > 0 && (!subject || !visibleSubjects.find(s => s.name === subject))) {
       setSubject(visibleSubjects[0].name);
     }
-  }, [subjectsConfig]);
+  }, [subjectsConfig, deletedSubjects]);
 
   // 設定 Viewport
   useEffect(() => {
@@ -121,46 +132,50 @@ const App = () => {
     }
   };
 
-  // 新增工作表並同步到 Google Sheets
   const addSubject = async () => {
     const name = newSubjectName.trim();
     if (!name) return;
     if (subjectsConfig.find(s => s.name === name)) {
-      alert('科目名稱已存在');
+      alert('科目名稱已存在於目前清單中');
       return;
     }
 
     setIsCreating(true);
     try {
-      // 調用 API 告知 GAS 建立新分頁
       const url = `${API_BASE_URL}?action=createSheet&name=${encodeURIComponent(name)}&t=${Date.now()}`;
       const response = await fetch(url);
       const result = await response.json();
 
       if (result.success) {
-        const newSub = {
-          id: Date.now().toString(),
-          name: name,
-          isVisible: true
-        };
+        const newSub = { id: Date.now().toString(), name: name, isVisible: true };
         setSubjectsConfig([...subjectsConfig, newSub]);
         setNewSubjectName('');
+        // 如果這個名稱剛好在回收站，將其移除
+        setDeletedSubjects(deletedSubjects.filter(s => s.name !== name));
         alert(`成功！已在試算表中建立「${name}」工作表。`);
       } else {
         throw new Error(result.error || "建立失敗");
       }
     } catch (err) {
       console.error("同步失敗:", err);
-      alert(`雲端同步失敗：${err.message}\n請確保 Google Apps Script 已更新支援建立功能。`);
+      alert(`雲端同步失敗：${err.message}`);
     } finally {
       setIsCreating(false);
     }
   };
 
   const deleteSubject = (id) => {
-    if (window.confirm('確定要刪除此工作表設定嗎？（這不會刪除 Google Sheet 原始分頁）')) {
+    const subToDelete = subjectsConfig.find(s => s.id === id);
+    if (window.confirm(`確定要從後台移除「${subToDelete.name}」嗎？\n(此科目將移至下方的回收站，不會刪除 Google Sheet 原始分頁)`)) {
+      setDeletedSubjects([...deletedSubjects, subToDelete]);
       setSubjectsConfig(subjectsConfig.filter(s => s.id !== id));
     }
+  };
+
+  const restoreSubject = (id) => {
+    const subToRestore = deletedSubjects.find(s => s.id === id);
+    setSubjectsConfig([...subjectsConfig, subToRestore]);
+    setDeletedSubjects(deletedSubjects.filter(s => s.id !== id));
   };
 
   const toggleVisibility = (id) => {
@@ -169,8 +184,104 @@ const App = () => {
     ));
   };
 
-  // --- 渲染組件 ---
-  
+  // --- 樣式設定 ---
+  const appStyles = `
+    .app-main {
+      min-height: 100vh;
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 20px;
+      font-family: -apple-system, system-ui, "SF Pro Display", "SF Pro Text", sans-serif;
+      box-sizing: border-box;
+      color: #1e293b;
+      position: relative;
+    }
+    
+    .settings-entry-btn {
+      position: absolute; top: 24px; right: 24px; background: white; border: none;
+      width: 44px; height: 44px; border-radius: 14px; display: flex;
+      align-items: center; justify-content: center; color: #94a3b8; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 10;
+    }
+    .settings-entry-btn:hover { color: #4f46e5; transform: rotate(45deg); box-shadow: 0 6px 16px rgba(79, 70, 229, 0.1); }
+
+    .header-ui { text-align: center; margin-bottom: 32px; width: 100%; }
+    .logo-ui {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      width: 56px; height: 56px; border-radius: 20px; display: flex; 
+      align-items: center; justify-content: center; margin: 0 auto 16px;
+      box-shadow: 0 12px 24px -8px rgba(79, 70, 229, 0.4);
+    }
+
+    .nav-ui {
+      display: flex; background: #e2e8f0; padding: 5px;
+      border-radius: 16px; margin-bottom: 28px; width: 100%; max-width: 380px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); overflow-x: auto;
+    }
+    .nav-btn {
+      flex: 1; padding: 12px 16px; border: none; border-radius: 12px;
+      font-weight: 700; cursor: pointer; transition: all 0.3s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      background: transparent; color: #64748b; font-size: 14px; white-space: nowrap;
+    }
+    .nav-btn.active { background: white; color: #4f46e5; box-shadow: 0 4px 12px -2px rgba(0,0,0,0.08); transform: translateY(-1px); }
+    
+    .search-card {
+      width: 100%; max-width: 380px; background: white; padding: 8px;
+      border-radius: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.04);
+      position: relative; transition: transform 0.3s;
+    }
+    .search-ui-input {
+      width: 100%; padding: 18px 20px 18px 56px; border-radius: 18px;
+      border: 2px solid transparent; background: #f8fafc; font-size: 17px;
+      font-weight: 600; outline: none; transition: all 0.3s; box-sizing: border-box;
+      color: #1e293b;
+    }
+    .search-ui-input:focus { background: white; border-color: #c7d2fe; box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08); }
+    .search-ui-icon { position: absolute; left: 24px; top: 50%; transform: translateY(-50%); color: #6366f1; }
+    
+    .card-ui {
+      width: 100%; max-width: 380px; background: white; margin-top: 28px;
+      border-radius: 28px; padding: 28px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.08);
+      animation: popUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes popUp { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    
+    .score-display-box {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; border-radius: 20px;
+      padding: 24px; display: flex; justify-content: space-between; align-items: center; margin-top: 20px;
+    }
+    .score-val-ui { font-size: 42px; font-weight: 900; }
+    .score-label { font-size: 14px; color: #94a3b8; font-weight: 700; margin: 0; }
+    
+    .admin-btn {
+      padding: 14px; border: none; border-radius: 14px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+    }
+    .admin-btn.primary { background: #4f46e5; color: white; }
+    .admin-btn.secondary { background: #f1f5f9; color: #64748b; }
+    .admin-btn:hover { filter: brightness(1.1); }
+    .admin-btn:active { transform: scale(0.98); }
+    .admin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .recycle-bin-item {
+      display: flex; align-items: center; justify-content: space-between; 
+      padding: 10px 14px; background: #fdfdfd; border: 1px dashed #cbd5e1;
+      border-radius: 12px; margin-bottom: 8px; opacity: 0.8;
+    }
+
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    
+    @media (max-width: 480px) {
+      .app-main { padding: 24px 16px; }
+      .score-val-ui { font-size: 36px; }
+      .settings-entry-btn { top: 16px; right: 16px; }
+    }
+  `;
+
   // 管理員登入畫面
   if (isAdminMode && !isLoggedIn) {
     return (
@@ -189,8 +300,8 @@ const App = () => {
              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
            />
            <div style={{display: 'flex', gap: '10px', marginTop: '20px'}}>
-             <button className="admin-btn secondary" onClick={() => setIsAdminMode(false)}>取消</button>
-             <button className="admin-btn primary" onClick={handleLogin}>登入系統</button>
+             <button className="admin-btn secondary" style={{flex: 1}} onClick={() => setIsAdminMode(false)}>取消</button>
+             <button className="admin-btn primary" style={{flex: 1}} onClick={handleLogin}>登入系統</button>
            </div>
         </div>
       </div>
@@ -209,6 +320,7 @@ const App = () => {
         </div>
 
         <div className="card-ui">
+          {/* 新增區塊 */}
           <h3 style={{fontSize: '16px', fontWeight: 800, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px'}}>
             <Plus size={18} /> 新增工作表
           </h3>
@@ -232,8 +344,11 @@ const App = () => {
             </button>
           </div>
 
-          <h3 style={{fontSize: '16px', fontWeight: 800, marginBottom: '16px'}}>工作表清單</h3>
-          <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+          {/* 清單區塊 */}
+          <h3 style={{fontSize: '16px', fontWeight: 800, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px'}}>
+            <Archive size={18} /> 目前清單
+          </h3>
+          <div style={{display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px'}}>
             {subjectsConfig.map(sub => (
               <div key={sub.id} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0'}}>
                 <span style={{fontWeight: 700}}>{sub.name}</span>
@@ -257,7 +372,32 @@ const App = () => {
             {subjectsConfig.length === 0 && <p style={{textAlign: 'center', color: '#94a3b8', fontSize: '13px'}}>目前無任何工作表設定</p>}
           </div>
 
-          <div style={{marginTop: '24px', borderTop: '1px solid #f1f5f9', paddingTop: '24px'}}>
+          {/* 回收站區塊 */}
+          {deletedSubjects.length > 0 && (
+            <div style={{marginTop: '24px', paddingTop: '24px', borderTop: '2px dashed #e2e8f0'}}>
+              <h3 style={{fontSize: '14px', fontWeight: 800, marginBottom: '12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px'}}>
+                <RotateCcw size={16} /> 可復原的工作表 (回收站)
+              </h3>
+              <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                {deletedSubjects.map(sub => (
+                  <div key={sub.id} className="recycle-bin-item">
+                    <span style={{fontSize: '14px', color: '#64748b', fontWeight: 600}}>{sub.name}</span>
+                    <button 
+                      onClick={() => restoreSubject(sub.id)}
+                      style={{
+                        padding: '6px 12px', borderRadius: '8px', border: '1px solid #4f46e5', 
+                        background: 'white', color: '#4f46e5', cursor: 'pointer', fontSize: '12px', fontWeight: 700
+                      }}
+                    >
+                      恢復顯示
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{marginTop: '32px', borderTop: '1px solid #f1f5f9', paddingTop: '24px'}}>
             <a 
               href={SPREADSHEET_URL}
               target="_blank"
@@ -268,16 +408,17 @@ const App = () => {
                 color: 'white', 
                 textDecoration: 'none', 
                 gap: '8px',
-                width: 'auto'
+                width: '100%',
+                marginBottom: '12px'
               }}
             >
-              <ExternalLink size={18} /> 編輯原始試算表
+              <ExternalLink size={18} /> 開啟 Google 試算表編輯資料
             </a>
+            
+            <button className="admin-btn secondary" style={{width: '100%', gap: '8px'}} onClick={() => {setIsAdminMode(false); setIsLoggedIn(false);}}>
+              <LogOut size={18} /> 退出管理後台
+            </button>
           </div>
-          
-          <button className="admin-btn secondary" style={{marginTop: '16px', width: '100%', gap: '8px'}} onClick={() => {setIsAdminMode(false); setIsLoggedIn(false);}}>
-            <LogOut size={18} /> 退出後台
-          </button>
         </div>
       </div>
     );
@@ -290,23 +431,19 @@ const App = () => {
     <div className="app-main">
       <style>{appStyles}</style>
 
-      {/* Admin Settings Entry - Top Right Gear Icon */}
-      <button 
-        className="settings-entry-btn" 
-        onClick={() => setIsAdminMode(true)}
-        aria-label="Admin Settings"
-      >
+      {/* 管理按鈕 */}
+      <button className="settings-entry-btn" onClick={() => setIsAdminMode(true)}>
         <Settings size={22} />
       </button>
 
-      {/* Header Section */}
+      {/* 頁首 */}
       <div className="header-ui">
         <div className="logo-ui"><GraduationCap color="white" size={30} /></div>
         <h1 style={{fontSize: '24px', fontWeight: 900, margin: 0, letterSpacing: '-0.5px'}}>學期成績查詢</h1>
-        <p style={{color: '#64748b', fontSize: '11px', fontWeight: 800, letterSpacing: '2px', marginTop: '6px', textTransform: 'uppercase'}}>Academic Portal v4.0</p>
+        <p style={{color: '#64748b', fontSize: '11px', fontWeight: 800, letterSpacing: '2px', marginTop: '6px', textTransform: 'uppercase'}}>Academic Portal v4.1</p>
       </div>
 
-      {/* Subject Tabs */}
+      {/* 科目切換 */}
       {visibleSubjects.length > 0 ? (
         <div className="nav-ui">
           {visibleSubjects.map(sub => (
@@ -321,15 +458,13 @@ const App = () => {
           ))}
         </div>
       ) : (
-        <div className="card-ui" style={{textAlign: 'center', color: '#94a3b8'}}>
-          目前暫無開放查詢的科目
-        </div>
+        <div className="card-ui" style={{textAlign: 'center', color: '#94a3b8'}}>目前暫無開放查詢的科目</div>
       )}
 
       {loading ? (
-        <div style={{marginTop: '80px', textAlign: 'center', color: '#6366f1'}}>
-          <Loader2 className="spin" size={42} />
-          <p style={{marginTop: '16px', fontWeight: 700, fontSize: '15px', color: '#4f46e5'}}>正在同步雲端資料庫...</p>
+        <div style={{marginTop: '80px', textAlign: 'center'}}>
+          <Loader2 className="spin" size={42} color="#4f46e5" />
+          <p style={{marginTop: '16px', fontWeight: 700, color: '#4f46e5'}}>正在同步雲端資料庫...</p>
         </div>
       ) : error ? (
         <div className="card-ui" style={{border: '1.5px solid #fee2e2', background: '#fffcfc'}}>
@@ -422,7 +557,7 @@ const App = () => {
           ) : (
             <div className="empty-state">
               <Search size={48} style={{opacity: 0.1, marginBottom: '12px'}} />
-              <p style={{fontSize: '14px', fontWeight: 600}}>等待輸入查詢資料...</p>
+              <p style={{fontSize: '14px', fontWeight: 600, color: '#cbd5e1'}}>等待輸入查詢資料...</p>
             </div>
           )}
         </>
@@ -435,124 +570,5 @@ const App = () => {
     </div>
   );
 };
-
-// --- 樣式設定 ---
-const appStyles = `
-  .app-main {
-    min-height: 100vh;
-    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 32px 20px;
-    font-family: -apple-system, system-ui, "SF Pro Display", sans-serif;
-    box-sizing: border-box;
-    color: #1e293b;
-    position: relative;
-  }
-  
-  .settings-entry-btn {
-    position: absolute;
-    top: 24px;
-    right: 24px;
-    background: white;
-    border: none;
-    width: 44px;
-    height: 44px;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #94a3b8;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 10;
-  }
-  .settings-entry-btn:hover {
-    color: #4f46e5;
-    transform: rotate(45deg);
-    box-shadow: 0 6px 16px rgba(79, 70, 229, 0.1);
-  }
-  .settings-entry-btn:active {
-    transform: scale(0.9) rotate(45deg);
-  }
-
-  .header-ui { text-align: center; margin-bottom: 32px; width: 100%; }
-  .logo-ui {
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-    width: 56px; height: 56px; border-radius: 20px; display: flex; 
-    align-items: center; justify-content: center; margin: 0 auto 16px;
-    box-shadow: 0 12px 24px -8px rgba(79, 70, 229, 0.4);
-  }
-  .nav-ui {
-    display: flex; background: #e2e8f0; padding: 5px;
-    border-radius: 16px; margin-bottom: 28px; width: 100%; max-width: 380px;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
-    overflow-x: auto;
-  }
-  .nav-btn {
-    flex: 1; padding: 12px 16px; border: none; border-radius: 12px;
-    font-weight: 700; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    background: transparent; color: #64748b; font-size: 14px;
-    white-space: nowrap;
-  }
-  .nav-btn.active { 
-    background: white; 
-    color: #4f46e5; 
-    box-shadow: 0 4px 12px -2px rgba(0,0,0,0.08);
-    transform: translateY(-1px);
-  }
-  
-  .search-card {
-    width: 100%; max-width: 380px; background: white; padding: 8px;
-    border-radius: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.04);
-    position: relative; transition: transform 0.3s;
-  }
-  .search-ui-input {
-    width: 100%; padding: 18px 20px 18px 56px; border-radius: 18px;
-    border: 2px solid transparent; background: #f8fafc; font-size: 17px;
-    font-weight: 600; outline: none; transition: all 0.3s; box-sizing: border-box;
-    color: #1e293b;
-  }
-  .search-ui-input:focus { background: white; border-color: #c7d2fe; box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08); }
-  .search-ui-icon { position: absolute; left: 24px; top: 50%; transform: translateY(-50%); color: #6366f1; }
-  
-  .card-ui {
-    width: 100%; max-width: 380px; background: white; margin-top: 28px;
-    border-radius: 28px; padding: 28px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.08);
-    animation: popUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  @keyframes popUp { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
-  
-  .score-display-box {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; border-radius: 20px;
-    padding: 24px; display: flex; justify-content: space-between; align-items: center; margin-top: 20px;
-  }
-  .score-val-ui { font-size: 42px; font-weight: 900; }
-  .score-label { font-size: 14px; color: #94a3b8; font-weight: 700; margin: 0; }
-  
-  .info-tip { display: flex; gap: 8px; width: 100%; max-width: 380px; margin-top: 14px; padding: 0 12px; }
-  .info-tip-text { font-size: 12px; color: #94a3b8; line-height: 1.4; }
-
-  .admin-btn {
-    padding: 14px; border: none; border-radius: 14px; font-weight: 700; cursor: pointer;
-    flex: 1; display: flex; align-items: center; justify-content: center; transition: all 0.2s;
-  }
-  .admin-btn.primary { background: #4f46e5; color: white; }
-  .admin-btn.secondary { background: #f1f5f9; color: #64748b; }
-  .admin-btn:active { transform: scale(0.98); }
-  .admin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  .spin { animation: spin 1s linear infinite; }
-  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-  
-  @media (max-width: 480px) {
-    .app-main { padding: 24px 16px; }
-    .score-val-ui { font-size: 36px; }
-    .settings-entry-btn { top: 16px; right: 16px; }
-  }
-`;
 
 export default App;
