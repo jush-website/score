@@ -60,11 +60,25 @@ const App = () => {
     if (!term || allData.length === 0) return null;
     
     return allData.find(s => {
-      const sId = (s.學號 || s.studentId || "").toString().toUpperCase();
-      const sName = (s.姓名 || s.name || "").toString();
+      const sId = (s.學號 ?? s.studentId ?? "").toString().toUpperCase();
+      const sName = (s.姓名 ?? s.name ?? "").toString();
       return sId === term || sName === searchTerm.trim();
     });
   }, [searchTerm, allData]);
+
+  // 獲取顯示用的分數（支援數字與中文字串）
+  const displayScore = useMemo(() => {
+    if (!queryResult) return null;
+    const val = queryResult.分數 ?? queryResult.score;
+    return val !== undefined && val !== null ? val : "無資料";
+  }, [queryResult]);
+
+  // 判斷是否為及格狀態（僅針對數字進行判斷）
+  const isPassed = useMemo(() => {
+    const score = Number(displayScore);
+    if (isNaN(score)) return false; // 如果是中文字（如：缺考），視為未過狀態顯示紅色
+    return score >= 60;
+  }, [displayScore]);
 
   return (
     <div className="app-main">
@@ -167,7 +181,7 @@ const App = () => {
           position: relative; overflow: hidden;
         }
         .score-val-ui { 
-          font-size: 48px; 
+          font-size: 42px; 
           font-weight: 900; 
           transition: all 0.3s ease;
         }
@@ -183,14 +197,15 @@ const App = () => {
         @media (max-width: 480px) {
           .app-main { padding: 24px 16px; }
           .search-ui-input { font-size: 16px; }
+          .score-val-ui { font-size: 36px; }
         }
       `}</style>
 
       {/* Header Section */}
       <div className="header-ui">
         <div className="logo-ui"><GraduationCap color="white" size={30} /></div>
-        <h1 style={{fontSize: '24px', fontWeight: 900, margin: 0, letterSpacing: '-0.5px'}}>學期成績查詢</h1>
-        <p style={{color: '#64748b', fontSize: '11px', fontWeight: 800, letterSpacing: '2px', marginTop: '6px', textTransform: 'uppercase'}}>Academic Portal v4.0</p>
+        <h1 style={{fontSize: '24px', fontWeight: 900, margin: 0, letterSpacing: '-0.5px'}}>成績查詢系統</h1>
+        <p style={{color: '#64748b', fontSize: '11px', fontWeight: 800, letterSpacing: '2px', marginTop: '6px', textTransform: 'uppercase'}}>Academic Portal</p>
       </div>
 
       {/* Subject Tabs */}
@@ -246,14 +261,14 @@ const App = () => {
                        <User size={12} color="#6366f1" />
                        <span style={{fontSize: '10px', color: '#6366f1', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase'}}>Full Name</span>
                     </div>
-                    <h2 style={{fontSize: '28px', fontWeight: 900, margin: 0}}>{queryResult.姓名 || queryResult.name}</h2>
+                    <h2 style={{fontSize: '28px', fontWeight: 900, margin: 0}}>{queryResult.姓名 ?? queryResult.name}</h2>
                   </div>
                   <div style={{textAlign: 'right'}}>
                     <div style={{display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '5px', marginBottom: '4px'}}>
                        <span style={{fontSize: '10px', color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase'}}>Student ID</span>
                        <Hash size={10} color="#94a3b8" />
                     </div>
-                    <div style={{background: '#f1f5f9', padding: '4px 10px', borderRadius: '10px', fontSize: '13px', fontWeight: 700, color: '#475569'}}>{queryResult.學號 || queryResult.studentId}</div>
+                    <div style={{background: '#f1f5f9', padding: '4px 10px', borderRadius: '10px', fontSize: '13px', fontWeight: 700, color: '#475569'}}>{queryResult.學號 ?? queryResult.studentId}</div>
                   </div>
                 </div>
 
@@ -261,20 +276,20 @@ const App = () => {
                   <div>
                     <p className="score-label">{subject} 期末成績</p>
                     <div style={{display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontSize: '10px', fontWeight: 800, marginTop: '8px'}}>
-                      <CheckCircle2 size={12} color={(queryResult.分數 || queryResult.score) >= 60 ? '#4ade80' : '#fb7185'} /> 
+                      <CheckCircle2 size={12} color={isPassed ? '#4ade80' : '#fb7185'} /> 
                       OFFICIAL CLOUD SYNC
                     </div>
                   </div>
                   <div 
                     className="score-val-ui" 
                     style={{
-                      color: (queryResult.分數 || queryResult.score) >= 60 ? '#4ade80' : '#ef4444',
-                      textShadow: (queryResult.分數 || queryResult.score) >= 60 
+                      color: isPassed ? '#4ade80' : '#ef4444',
+                      textShadow: isPassed 
                         ? '0 0 20px rgba(74, 222, 128, 0.4)' 
                         : '0 0 20px rgba(239, 68, 68, 0.4)'
                     }}
                   >
-                    {queryResult.分數 || queryResult.score}
+                    {displayScore}
                   </div>
                 </div>
                 
