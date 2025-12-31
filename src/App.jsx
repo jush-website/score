@@ -3,7 +3,7 @@ import {
   Search, GraduationCap, AlertCircle, Info, CheckCircle2, 
   Loader2, BookOpen, Cpu, RefreshCw, ShieldAlert, 
   User, Hash, Lock, Eye, EyeOff, Plus, Trash2, X, Settings, 
-  LogOut, Save, ExternalLink, RotateCcw, Archive
+  LogOut, Save, ExternalLink, RotateCcw, Archive, CloudSync, ChevronRight
 } from 'lucide-react';
 
 // Google Apps Script API 網址
@@ -24,6 +24,7 @@ const App = () => {
   const [error, setError] = useState(null);
 
   // --- 後台管理狀態 ---
+  const [isSyncing, setIsSyncing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   
   // 目前顯示中的工作表
@@ -35,7 +36,7 @@ const App = () => {
     ];
   });
 
-  // 已刪除的工作表 (回收站)
+  // 已刪除/隱藏的工作表設定 (回收站)
   const [deletedSubjects, setDeletedSubjects] = useState(() => {
     const saved = localStorage.getItem('app_deleted_subjects');
     return saved ? JSON.parse(saved) : [];
@@ -132,6 +133,48 @@ const App = () => {
     }
   };
 
+  // 掃描 Google Sheets 現有分頁並自動補全清單
+  const syncWithCloud = async () => {
+    setIsSyncing(true);
+    try {
+      const url = `${API_BASE_URL}?action=listSheets&t=${Date.now()}`;
+      const response = await fetch(url);
+      const cloudSheets = await response.json();
+
+      if (Array.isArray(cloudSheets)) {
+        const currentNames = subjectsConfig.map(s => s.name);
+        const deletedNames = deletedSubjects.map(s => s.name);
+        
+        let addedCount = 0;
+        const newConfigs = [...subjectsConfig];
+
+        cloudSheets.forEach(name => {
+          // 如果分頁不在目前清單也不在回收站，就自動加進來
+          if (!currentNames.includes(name) && !deletedNames.includes(name)) {
+            newConfigs.push({
+              id: `cloud-${Date.now()}-${name}`,
+              name: name,
+              isVisible: true,
+              isCloudSynced: true
+            });
+            addedCount++;
+          }
+        });
+
+        if (addedCount > 0) {
+          setSubjectsConfig(newConfigs);
+          alert(`同步完成！發現並新增了 ${addedCount} 個雲端分頁。`);
+        } else {
+          alert('同步完成！目前清單已與雲端同步。');
+        }
+      }
+    } catch (err) {
+      alert('同步失敗：無法讀取雲端分頁列表');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const addSubject = async () => {
     const name = newSubjectName.trim();
     if (!name) return;
@@ -150,14 +193,12 @@ const App = () => {
         const newSub = { id: Date.now().toString(), name: name, isVisible: true };
         setSubjectsConfig([...subjectsConfig, newSub]);
         setNewSubjectName('');
-        // 如果這個名稱剛好在回收站，將其移除
         setDeletedSubjects(deletedSubjects.filter(s => s.name !== name));
         alert(`成功！已在試算表中建立「${name}」工作表。`);
       } else {
         throw new Error(result.error || "建立失敗");
       }
     } catch (err) {
-      console.error("同步失敗:", err);
       alert(`雲端同步失敗：${err.message}`);
     } finally {
       setIsCreating(false);
@@ -166,7 +207,7 @@ const App = () => {
 
   const deleteSubject = (id) => {
     const subToDelete = subjectsConfig.find(s => s.id === id);
-    if (window.confirm(`確定要從後台移除「${subToDelete.name}」嗎？\n(此科目將移至下方的回收站，不會刪除 Google Sheet 原始分頁)`)) {
+    if (window.confirm(`確定要從後台移除「${subToDelete.name}」嗎？\n(此科目將移至下方的回收站，可隨時復原顯示)`)) {
       setDeletedSubjects([...deletedSubjects, subToDelete]);
       setSubjectsConfig(subjectsConfig.filter(s => s.id !== id));
     }
@@ -176,6 +217,12 @@ const App = () => {
     const subToRestore = deletedSubjects.find(s => s.id === id);
     setSubjectsConfig([...subjectsConfig, subToRestore]);
     setDeletedSubjects(deletedSubjects.filter(s => s.id !== id));
+  };
+
+  const permanentDelete = (id) => {
+    if (window.confirm('確定要徹底刪除此項目的系統設定嗎？\n(此操作無法復原，但不會刪除 Google Sheet 的原始資料)')) {
+      setDeletedSubjects(deletedSubjects.filter(s => s.id !== id));
+    }
   };
 
   const toggleVisibility = (id) => {
@@ -189,14 +236,9 @@ const App = () => {
     .app-main {
       min-height: 100vh;
       background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 32px 20px;
-      font-family: -apple-system, system-ui, "SF Pro Display", "SF Pro Text", sans-serif;
-      box-sizing: border-box;
-      color: #1e293b;
-      position: relative;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 32px 20px; font-family: -apple-system, system-ui, sans-serif;
+      box-sizing: border-box; color: #1e293b; position: relative;
     }
     
     .settings-entry-btn {
@@ -254,7 +296,6 @@ const App = () => {
       padding: 24px; display: flex; justify-content: space-between; align-items: center; margin-top: 20px;
     }
     .score-val-ui { font-size: 42px; font-weight: 900; }
-    .score-label { font-size: 14px; color: #94a3b8; font-weight: 700; margin: 0; }
     
     .admin-btn {
       padding: 14px; border: none; border-radius: 14px; font-weight: 700; cursor: pointer;
@@ -262,15 +303,17 @@ const App = () => {
     }
     .admin-btn.primary { background: #4f46e5; color: white; }
     .admin-btn.secondary { background: #f1f5f9; color: #64748b; }
-    .admin-btn:hover { filter: brightness(1.1); }
+    .admin-btn.outline { background: white; border: 1px solid #e2e8f0; color: #64748b; }
+    .admin-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
     .admin-btn:active { transform: scale(0.98); }
     .admin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .recycle-bin-item {
       display: flex; align-items: center; justify-content: space-between; 
-      padding: 10px 14px; background: #fdfdfd; border: 1px dashed #cbd5e1;
-      border-radius: 12px; margin-bottom: 8px; opacity: 0.8;
+      padding: 12px 14px; background: #fafafa; border: 1px dashed #cbd5e1;
+      border-radius: 14px; margin-bottom: 8px; transition: all 0.3s;
     }
+    .recycle-bin-item:hover { border-color: #4f46e5; background: white; }
 
     .spin { animation: spin 1s linear infinite; }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -319,12 +362,23 @@ const App = () => {
           <p style={{color: '#64748b', fontSize: '11px', fontWeight: 800, marginTop: '4px'}}>CONFIG & WORKSHEETS</p>
         </div>
 
-        <div className="card-ui">
+        <div className="card-ui" style={{paddingTop: '20px'}}>
+          {/* 雲端同步按鈕 */}
+          <button 
+            className="admin-btn outline" 
+            style={{width: '100%', marginBottom: '24px', gap: '8px', borderColor: '#4f46e5', color: '#4f46e5', background: '#f5f7ff'}}
+            onClick={syncWithCloud}
+            disabled={isSyncing}
+          >
+            {isSyncing ? <Loader2 className="spin" size={18} /> : <RefreshCw size={18} />}
+            掃描並同步雲端分頁
+          </button>
+
           {/* 新增區塊 */}
-          <h3 style={{fontSize: '16px', fontWeight: 800, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px'}}>
-            <Plus size={18} /> 新增工作表
+          <h3 style={{fontSize: '15px', fontWeight: 800, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px'}}>
+            <Plus size={18} color="#4f46e5" /> 新增工作表
           </h3>
-          <div style={{display: 'flex', gap: '10px', marginBottom: '24px'}}>
+          <div style={{display: 'flex', gap: '10px', marginBottom: '32px'}}>
             <input 
               type="text" 
               className="search-ui-input" 
@@ -340,23 +394,25 @@ const App = () => {
               onClick={addSubject}
               disabled={isCreating}
             >
-              {isCreating ? <Loader2 className="spin" size={18} /> : "新增"}
+              {isCreating ? <Loader2 className="spin" size={18} /> : "建立"}
             </button>
           </div>
 
           {/* 清單區塊 */}
-          <h3 style={{fontSize: '16px', fontWeight: 800, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px'}}>
-            <Archive size={18} /> 目前清單
+          <h3 style={{fontSize: '15px', fontWeight: 800, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: '#1e293b'}}>
+            <Archive size={18} color="#4f46e5" /> 目前清單
           </h3>
-          <div style={{display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px'}}>
+          <div style={{display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '32px'}}>
             {subjectsConfig.map(sub => (
               <div key={sub.id} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0'}}>
-                <span style={{fontWeight: 700}}>{sub.name}</span>
+                <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
+                  <span style={{fontWeight: 700, color: '#334155'}}>{sub.name}</span>
+                  {sub.isCloudSynced && <div style={{fontSize: '10px', padding: '2px 6px', background: '#e0e7ff', color: '#4338ca', borderRadius: '4px', fontWeight: 800}}>雲端</div>}
+                </div>
                 <div style={{display: 'flex', gap: '8px'}}>
                   <button 
                     onClick={() => toggleVisibility(sub.id)}
                     style={{padding: '8px', borderRadius: '10px', border: 'none', background: sub.isVisible ? '#dcfce7' : '#fee2e2', color: sub.isVisible ? '#166534' : '#991b1b', cursor: 'pointer'}}
-                    title={sub.isVisible ? "目前為顯示狀態" : "目前為隱藏狀態"}
                   >
                     {sub.isVisible ? <Eye size={18} /> : <EyeOff size={18} />}
                   </button>
@@ -376,21 +432,29 @@ const App = () => {
           {deletedSubjects.length > 0 && (
             <div style={{marginTop: '24px', paddingTop: '24px', borderTop: '2px dashed #e2e8f0'}}>
               <h3 style={{fontSize: '14px', fontWeight: 800, marginBottom: '12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px'}}>
-                <RotateCcw size={16} /> 可復原的工作表 (回收站)
+                <RotateCcw size={16} /> 資源回收站 (隱藏清單)
               </h3>
               <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
                 {deletedSubjects.map(sub => (
                   <div key={sub.id} className="recycle-bin-item">
                     <span style={{fontSize: '14px', color: '#64748b', fontWeight: 600}}>{sub.name}</span>
-                    <button 
-                      onClick={() => restoreSubject(sub.id)}
-                      style={{
-                        padding: '6px 12px', borderRadius: '8px', border: '1px solid #4f46e5', 
-                        background: 'white', color: '#4f46e5', cursor: 'pointer', fontSize: '12px', fontWeight: 700
-                      }}
-                    >
-                      恢復顯示
-                    </button>
+                    <div style={{display: 'flex', gap: '6px'}}>
+                      <button 
+                        onClick={() => restoreSubject(sub.id)}
+                        style={{
+                          padding: '6px 12px', borderRadius: '8px', border: '1px solid #4f46e5', 
+                          background: 'white', color: '#4f46e5', cursor: 'pointer', fontSize: '12px', fontWeight: 700
+                        }}
+                      >
+                        復原
+                      </button>
+                      <button 
+                        onClick={() => permanentDelete(sub.id)}
+                        style={{padding: '6px', borderRadius: '8px', border: 'none', background: '#fee2e2', color: '#ef4444', cursor: 'pointer'}}
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -403,16 +467,9 @@ const App = () => {
               target="_blank"
               rel="noopener noreferrer"
               className="admin-btn"
-              style={{
-                background: '#059669', 
-                color: 'white', 
-                textDecoration: 'none', 
-                gap: '8px',
-                width: '100%',
-                marginBottom: '12px'
-              }}
+              style={{ background: '#059669', color: 'white', textDecoration: 'none', gap: '8px', width: '100%', marginBottom: '12px' }}
             >
-              <ExternalLink size={18} /> 開啟 Google 試算表編輯資料
+              <ExternalLink size={18} /> 編輯試算表資料
             </a>
             
             <button className="admin-btn secondary" style={{width: '100%', gap: '8px'}} onClick={() => {setIsAdminMode(false); setIsLoggedIn(false);}}>
@@ -440,7 +497,7 @@ const App = () => {
       <div className="header-ui">
         <div className="logo-ui"><GraduationCap color="white" size={30} /></div>
         <h1 style={{fontSize: '24px', fontWeight: 900, margin: 0, letterSpacing: '-0.5px'}}>學期成績查詢</h1>
-        <p style={{color: '#64748b', fontSize: '11px', fontWeight: 800, letterSpacing: '2px', marginTop: '6px', textTransform: 'uppercase'}}>Academic Portal v4.1</p>
+        <p style={{color: '#64748b', fontSize: '11px', fontWeight: 800, letterSpacing: '2px', marginTop: '6px', textTransform: 'uppercase'}}>Academic Portal v4.2</p>
       </div>
 
       {/* 科目切換 */}
@@ -515,7 +572,7 @@ const App = () => {
 
                 <div className="score-display-box">
                   <div>
-                    <p className="score-label">{subject} 期末成績</p>
+                    <p style={{fontSize: '14px', color: '#94a3b8', fontWeight: 700, margin: 0}}>{subject} 期末成績</p>
                     <div style={{display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontSize: '10px', fontWeight: 800, marginTop: '8px'}}>
                       <CheckCircle2 size={12} color={isPassed ? '#4ade80' : '#fb7185'} /> 
                       OFFICIAL CLOUD SYNC
@@ -556,8 +613,10 @@ const App = () => {
             )
           ) : (
             <div className="empty-state">
-              <Search size={48} style={{opacity: 0.1, marginBottom: '12px'}} />
-              <p style={{fontSize: '14px', fontWeight: 600, color: '#cbd5e1'}}>等待輸入查詢資料...</p>
+              <div style={{textAlign: 'center', marginTop: '60px', opacity: 0.2}}>
+                <Search size={48} style={{marginBottom: '12px'}} />
+                <p style={{fontSize: '14px', fontWeight: 600}}>等待輸入查詢資料...</p>
+              </div>
             </div>
           )}
         </>
