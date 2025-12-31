@@ -439,11 +439,6 @@ const App = () => {
             <input className="search-ui-input" type="text" placeholder={`輸入學號或姓名`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
 
-          <div className="info-tip">
-            <Info size={14} color="#6366f1" style={{flexShrink: 0, marginTop: '1px'}} />
-            
-          </div>
-
           {searchTerm.trim() !== '' ? (
             queryResult ? (
               <div className="card-ui">
