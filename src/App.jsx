@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Search, GraduationCap, AlertCircle, Info, CheckCircle2, Loader2, BookOpen, Cpu, RefreshCw, ShieldAlert, ExternalLink, Lock, UserX, User, Hash } from 'lucide-react';
 
 // Google Apps Script API 網址
-const API_BASE_URL = "https://script.google.com/macros/s/AKfycbzoJC30nR0TgW_t--bs_TXwy54CsadsVjyt-cz5zGjJgAZkBU_8U4ve9QOgDYxGxtVa/exec";
+const API_BASE_URL = "https://script.google.com/macros/s/AKfycbzTUO_rRZh6fRz95M4zc7ewk0lmfPbyAVezsVKIKbQbXJBPoGHnZc4JnGmbCkRM2l7d/exec";
 
 const App = () => {
   const [subject, setSubject] = useState('資料結構'); 
