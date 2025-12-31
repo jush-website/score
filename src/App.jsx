@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, GraduationCap, AlertCircle, Info, CheckCircle2, Loader2, BookOpen, Cpu, RefreshCw, ShieldAlert, ExternalLink, Lock, UserX, User, Hash } from 'lucide-react';
+import { Search, GraduationCap, AlertCircle, Info, CheckCircle2, Loader2, BookOpen, Cpu, RefreshCw, ShieldAlert, User, Hash } from 'lucide-react';
 
 // Google Apps Script API 網址
 const API_BASE_URL = "https://script.google.com/macros/s/AKfycbzTUO_rRZh6fRz95M4zc7ewk0lmfPbyAVezsVKIKbQbXJBPoGHnZc4JnGmbCkRM2l7d/exec";
@@ -166,12 +166,19 @@ const App = () => {
           padding: 24px; display: flex; justify-content: space-between; align-items: center; margin-top: 20px;
           position: relative; overflow: hidden;
         }
-        .score-val-ui { font-size: 48px; font-weight: 900; color: #818cf8; text-shadow: 0 0 20px rgba(129, 140, 248, 0.3); }
+        .score-val-ui { 
+          font-size: 48px; 
+          font-weight: 900; 
+          transition: all 0.3s ease;
+        }
         .score-label { font-size: 14px; color: #94a3b8; font-weight: 700; margin: 0; }
         
         .empty-state {
           text-align: center; margin-top: 60px; color: #cbd5e1;
         }
+
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         
         @media (max-width: 480px) {
           .app-main { padding: 24px 16px; }
@@ -198,9 +205,8 @@ const App = () => {
 
       {loading ? (
         <div style={{marginTop: '80px', textAlign: 'center', color: '#6366f1'}}>
-          <Loader2 style={{animation: 'spin 1s linear infinite'}} size={42} />
+          <Loader2 className="spin" size={42} />
           <p style={{marginTop: '16px', fontWeight: 700, fontSize: '15px', color: '#4f46e5'}}>正在同步雲端資料庫...</p>
-          <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
         </div>
       ) : error ? (
         <div className="card-ui" style={{border: '1.5px solid #fee2e2', background: '#fffcfc'}}>
@@ -213,7 +219,7 @@ const App = () => {
         </div>
       ) : (
         <>
-          {/* Enhanced Search Input */}
+          {/* Search Input */}
           <div className="search-card">
             <Search className="search-ui-icon" size={22} strokeWidth={2.5} />
             <input 
@@ -254,11 +260,20 @@ const App = () => {
                 <div className="score-display-box">
                   <div>
                     <p className="score-label">{subject} 期末成績</p>
-                    <div style={{display: 'flex', alignItems: 'center', gap: '6px', color: '#818cf8', fontSize: '10px', fontWeight: 800, marginTop: '8px'}}>
-                      <CheckCircle2 size={12} /> OFFICIAL CLOUD SYNC
+                    <div style={{display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontSize: '10px', fontWeight: 800, marginTop: '8px'}}>
+                      <CheckCircle2 size={12} color={(queryResult.分數 || queryResult.score) >= 60 ? '#4ade80' : '#fb7185'} /> 
+                      OFFICIAL CLOUD SYNC
                     </div>
                   </div>
-                  <div className="score-val-ui" style={{color: (queryResult.分數 || queryResult.score) >= 60 ? '#818cf8' : '#fb7185'}}>
+                  <div 
+                    className="score-val-ui" 
+                    style={{
+                      color: (queryResult.分數 || queryResult.score) >= 60 ? '#4ade80' : '#ef4444',
+                      textShadow: (queryResult.分數 || queryResult.score) >= 60 
+                        ? '0 0 20px rgba(74, 222, 128, 0.4)' 
+                        : '0 0 20px rgba(239, 68, 68, 0.4)'
+                    }}
+                  >
                     {queryResult.分數 || queryResult.score}
                   </div>
                 </div>
@@ -275,7 +290,7 @@ const App = () => {
             ) : (
               searchTerm.length >= 2 && (
                 <div className="card-ui" style={{textAlign: 'center', padding: '48px 24px'}}>
-                  <div style={{width: '64px', height: '64px', background: '#f8fafc', borderRadius: '100%', display: 'flex', alignItems: 'center', justifyCenter: 'center', margin: '0 auto 16px'}}>
+                  <div style={{width: '64px', height: '64px', background: '#f8fafc', borderRadius: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px'}}>
                     <AlertCircle size={32} color="#e2e8f0" style={{margin: '0 auto'}} />
                   </div>
                   <h3 style={{fontSize: '18px', fontWeight: 800, margin: 0}}>查無此資料</h3>
