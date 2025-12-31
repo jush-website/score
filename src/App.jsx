@@ -422,7 +422,7 @@ const App = () => {
       <div className="header-ui">
         <div className="logo-ui"><GraduationCap color="white" size={30} /></div>
         <div className="header-row">
-          <h1 style={{fontSize: '24px', fontWeight: 900, margin: 0, letterSpacing: '-0.5px'}}>學期成績查詢</h1>
+          <h1 style={{fontSize: '24px', fontWeight: 900, margin: 0, letterSpacing: '-0.5px'}}>Minar成績查詢</h1>
           <button 
             className="refresh-btn" 
             onClick={handleManualRefresh} 
