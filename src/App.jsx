@@ -431,9 +431,6 @@ const App = () => {
           >
             <RotateCw size={20} className={(loading || isSyncing) ? 'spin' : ''} />
           </button>
-        </div>
-        <p style={{color: '#64748b', fontSize: '11px', fontWeight: 800, letterSpacing: '2px', marginTop: '6px', textTransform: 'uppercase'}}>Academic Portal v4.4</p>
-      </div>
 
       {visibleSubjects.length > 0 ? (
         <div className="nav-ui">
