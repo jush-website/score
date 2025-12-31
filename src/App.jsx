@@ -434,7 +434,7 @@ const App = () => {
           </button>
         </div>
         <div>
-          <h2 style={{fontSize: '24px', fontWeight: 900, margin: 0, letterSpacing: '-0.5px'}}>系統為龔旭陽實驗室所有，仿冒必究</h2>
+          <h2 style={{fontSize: '12px', fontWeight: 900, margin: 0, letterSpacing: '-0.5px'}}>系統為龔旭陽實驗室所有，仿冒必究</h2>
         </div>
       </div>
 
