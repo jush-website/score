@@ -23,6 +23,7 @@ const App = () => {
   const [error, setError] = useState(null);
 
   // --- 後台管理狀態 ---
+  const [isCreating, setIsCreating] = useState(false);
   const [subjectsConfig, setSubjectsConfig] = useState(() => {
     const saved = localStorage.getItem('app_subjects_config');
     return saved ? JSON.parse(saved) : [
@@ -120,23 +121,44 @@ const App = () => {
     }
   };
 
-  const addSubject = () => {
-    if (!newSubjectName.trim()) return;
-    if (subjectsConfig.find(s => s.name === newSubjectName.trim())) {
+  // 新增工作表並同步到 Google Sheets
+  const addSubject = async () => {
+    const name = newSubjectName.trim();
+    if (!name) return;
+    if (subjectsConfig.find(s => s.name === name)) {
       alert('科目名稱已存在');
       return;
     }
-    const newSub = {
-      id: Date.now().toString(),
-      name: newSubjectName.trim(),
-      isVisible: true
-    };
-    setSubjectsConfig([...subjectsConfig, newSub]);
-    setNewSubjectName('');
+
+    setIsCreating(true);
+    try {
+      // 調用 API 告知 GAS 建立新分頁
+      const url = `${API_BASE_URL}?action=createSheet&name=${encodeURIComponent(name)}&t=${Date.now()}`;
+      const response = await fetch(url);
+      const result = await response.json();
+
+      if (result.success) {
+        const newSub = {
+          id: Date.now().toString(),
+          name: name,
+          isVisible: true
+        };
+        setSubjectsConfig([...subjectsConfig, newSub]);
+        setNewSubjectName('');
+        alert(`成功！已在試算表中建立「${name}」工作表。`);
+      } else {
+        throw new Error(result.error || "建立失敗");
+      }
+    } catch (err) {
+      console.error("同步失敗:", err);
+      alert(`雲端同步失敗：${err.message}\n請確保 Google Apps Script 已更新支援建立功能。`);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const deleteSubject = (id) => {
-    if (window.confirm('確定要刪除此工作表設定嗎？')) {
+    if (window.confirm('確定要刪除此工作表設定嗎？（這不會刪除 Google Sheet 原始分頁）')) {
       setSubjectsConfig(subjectsConfig.filter(s => s.id !== id));
     }
   };
@@ -197,9 +219,17 @@ const App = () => {
               style={{paddingLeft: '20px', fontSize: '14px'}}
               placeholder="輸入 Sheet 名稱 (例如: 期末考)"
               value={newSubjectName}
+              disabled={isCreating}
               onChange={(e) => setNewSubjectName(e.target.value)}
             />
-            <button className="admin-btn primary" style={{width: '80px'}} onClick={addSubject}>新增</button>
+            <button 
+              className="admin-btn primary" 
+              style={{width: '80px'}} 
+              onClick={addSubject}
+              disabled={isCreating}
+            >
+              {isCreating ? <Loader2 className="spin" size={18} /> : "新增"}
+            </button>
           </div>
 
           <h3 style={{fontSize: '16px', fontWeight: 800, marginBottom: '16px'}}>工作表清單</h3>
@@ -513,6 +543,7 @@ const appStyles = `
   .admin-btn.primary { background: #4f46e5; color: white; }
   .admin-btn.secondary { background: #f1f5f9; color: #64748b; }
   .admin-btn:active { transform: scale(0.98); }
+  .admin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
   .spin { animation: spin 1s linear infinite; }
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
