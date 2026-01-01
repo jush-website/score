@@ -3,11 +3,14 @@ import {
   Search, GraduationCap, AlertCircle, CheckCircle2, 
   Loader2, BookOpen, Cpu, RefreshCw, ShieldAlert, 
   User, Hash, Lock, Eye, EyeOff, Trash2, Settings, 
-  LogOut, ExternalLink, RotateCw
+  LogOut, ExternalLink, RotateCw, Layout, Maximize2, Minimize2,
+  Plus // 新增匯入 Plus 圖示
 } from 'lucide-react';
 
 const API_BASE_URL = "https://script.google.com/macros/s/AKfycbzTUO_rRZh6fRz95M4zc7ewk0lmfPbyAVezsVKIKbQbXJBPoGHnZc4JnGmbCkRM2l7d/exec";
 const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1O22jKgoSb_qk2ItORCbhRCUikmlS4tO5LOx8wS81H6Y/edit?usp=sharing";
+// 內嵌專用的 URL 格式
+const SPREADSHEET_EMBED_URL = "https://docs.google.com/spreadsheets/d/1O22jKgoSb_qk2ItORCbhRCUikmlS4tO5LOx8wS81H6Y/edit?widget=true&headers=false";
 
 const App = () => {
   const [isAdminMode, setIsAdminMode] = useState(false);
@@ -25,8 +28,11 @@ const App = () => {
   // 科目配置狀態
   const [subjectsConfig, setSubjectsConfig] = useState([]);
   const [newSubjectName, setNewSubjectName] = useState('');
+  
+  // 新增：控制試算表內嵌顯示狀態
+  const [showEmbedSheet, setShowEmbedSheet] = useState(false);
 
-  // 1. 核心同步邏輯：確保 id 絕對唯一且穩定
+  // 1. 核心同步邏輯
   const syncFromCloud = useCallback(async () => {
     setIsSyncing(true);
     try {
@@ -35,7 +41,6 @@ const App = () => {
       const cloudData = await response.json();
 
       if (Array.isArray(cloudData)) {
-        // 使用名稱 + 索引作為 ID，解決名稱重複導致的 Key 衝突
         const formattedData = cloudData.map((item, index) => ({
           id: `sub-${index}-${item.name || 'unnamed'}`,
           name: item.name || `未知科目-${index}`,
@@ -116,7 +121,8 @@ const App = () => {
   const displayScore = useMemo(() => {
     if (!queryResult) return null;
     const val = queryResult.分數 ?? queryResult.score;
-    return val !== undefined && val !== null ? val : "無資料";
+    // 確保分數轉換為字串或數字，避免物件導致 React 報錯
+    return val !== undefined && val !== null ? String(val) : "無資料";
   }, [queryResult]);
 
   const isPassed = useMemo(() => Number(displayScore) >= 60, [displayScore]);
@@ -147,6 +153,7 @@ const App = () => {
   const appStyles = `
     .app-main { min-height: 100vh; background: #f1f5f9; padding: 32px 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
     .card { background: white; border-radius: 24px; padding: 24px; width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin-bottom: 20px; box-sizing: border-box; }
+    .admin-card { width: 100%; max-width: 800px; }
     .logo-ui { width: 50px; height: 50px; background: #4f46e5; border-radius: 15px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; }
     .nav-tabs { display: flex; gap: 8px; overflow-x: auto; width: 100%; max-width: 400px; margin-bottom: 20px; padding: 4px; scrollbar-width: none; }
     .nav-tabs::-webkit-scrollbar { display: none; }
@@ -154,9 +161,11 @@ const App = () => {
     .tab-btn.active { background: white; color: #4f46e5; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
     .input-ui { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #f1f5f9; font-size: 16px; outline: none; box-sizing: border-box; transition: border-color 0.2s; }
     .input-ui:focus { border-color: #4f46e5; }
-    .btn-primary { width: 100%; padding: 15px; background: #4f46e5; color: white; border: none; border-radius: 15px; font-weight: 700; cursor: pointer; margin-top: 10px; transition: opacity 0.2s; }
+    .btn-primary { width: 100%; padding: 15px; background: #4f46e5; color: white; border: none; border-radius: 15px; font-weight: 700; cursor: pointer; margin-top: 10px; transition: opacity 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-secondary { width: 100%; padding: 15px; background: #f1f5f9; color: #64748b; border: none; border-radius: 15px; font-weight: 700; cursor: pointer; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
     .score-box { background: #1e293b; color: white; padding: 20px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
     .spin { animation: spin 1s linear infinite; }
+    .embed-container { width: 100%; border-radius: 20px; overflow: hidden; border: 2px solid #e2e8f0; background: white; margin-top: 20px; height: 600px; }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     @keyframes popUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   `;
@@ -169,7 +178,7 @@ const App = () => {
           <div className="logo-ui" style={{margin: '0 auto 20px'}}><Lock color="white" /></div>
           <h2 style={{marginBottom: '20px'}}>管理員登入</h2>
           <input className="input-ui" type="password" placeholder="請輸入管理密碼" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} />
-          <button className="btn-primary" onClick={handleLogin}>登入</button>
+          <button className="btn-primary" onClick={handleLogin}>登入系統</button>
           <button style={{marginTop: '15px', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontWeight: 600}} onClick={() => setIsAdminMode(false)}>返回查詢頁</button>
         </div>
       </div>
@@ -180,35 +189,70 @@ const App = () => {
     return (
       <div className="app-main">
         <style>{appStyles}</style>
-        <div className="card" style={{animation: 'popUp 0.3s ease'}}>
+        <div className="card admin-card" style={{animation: 'popUp 0.3s ease'}}>
           <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
-            <h2 style={{margin: 0}}>管理控制台</h2>
+            <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+              <div className="logo-ui" style={{margin: 0, width: '40px', height: '40px'}}><Settings size={20} color="white" /></div>
+              <h2 style={{margin: 0}}>管理控制台</h2>
+            </div>
             <button onClick={syncFromCloud} disabled={isSyncing} style={{border: 'none', background: 'none', cursor: 'pointer', padding: '5px'}}>
               <RotateCw size={20} className={isSyncing ? 'spin' : ''} color="#64748b" />
             </button>
           </div>
           
-          <div style={{marginBottom: '24px'}}>
-            <p style={{fontSize: '14px', color: '#64748b', fontWeight: 800, marginBottom: '12px'}}>科目顯示設定 (所有人可見)</p>
-            {subjectsConfig.length > 0 ? subjectsConfig.map((sub) => (
-              <div key={sub.id} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#f8fafc', borderRadius: '12px', marginBottom: '8px', border: '1px solid #e2e8f0'}}>
-                <span style={{fontWeight: 700, color: sub.isVisible ? '#1e293b' : '#94a3b8'}}>{sub.name} {!sub.isVisible && "(隱藏中)"}</span>
-                <button 
-                  onClick={() => toggleVisibility(sub.name, sub.isVisible)} 
-                  style={{border: 'none', background: sub.isVisible ? '#dcfce7' : '#f1f5f9', color: sub.isVisible ? '#166534' : '#64748b', padding: '6px 14px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600}}
-                >
-                  {sub.isVisible ? <><Eye size={16}/> 顯示中</> : <><EyeOff size={16}/> 已隱藏</>}
-                </button>
+          <div style={{display: 'grid', gridTemplateColumns: window.innerWidth > 768 ? '1fr 1fr' : '1fr', gap: '20px'}}>
+            {/* 左側：科目列表 */}
+            <div>
+              <p style={{fontSize: '14px', color: '#64748b', fontWeight: 800, marginBottom: '12px'}}>科目顯示設定 (所有人可見)</p>
+              <div style={{maxHeight: '300px', overflowY: 'auto', paddingRight: '5px'}}>
+                {subjectsConfig.length > 0 ? subjectsConfig.map((sub) => (
+                  <div key={sub.id} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#f8fafc', borderRadius: '12px', marginBottom: '8px', border: '1px solid #e2e8f0'}}>
+                    <span style={{fontWeight: 700, color: sub.isVisible ? '#1e293b' : '#94a3b8'}}>{sub.name}</span>
+                    <button 
+                      onClick={() => toggleVisibility(sub.name, sub.isVisible)} 
+                      style={{border: 'none', background: sub.isVisible ? '#dcfce7' : '#f1f5f9', color: sub.isVisible ? '#166534' : '#64748b', padding: '6px 14px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600}}
+                    >
+                      {sub.isVisible ? <><Eye size={16}/> 顯示</> : <><EyeOff size={16}/> 隱藏</>}
+                    </button>
+                  </div>
+                )) : <p style={{color: '#94a3b8', textAlign: 'center'}}>尚無科目資料</p>}
               </div>
-            )) : <p style={{color: '#94a3b8', textAlign: 'center'}}>尚無科目資料</p>}
+            </div>
+
+            {/* 右側：功能操作 */}
+            <div>
+              <p style={{fontSize: '14px', color: '#64748b', fontWeight: 800, marginBottom: '12px'}}>快捷功能</p>
+              <input className="input-ui" style={{marginBottom: '10px'}} placeholder="請輸入新科目名稱" value={newSubjectName} onChange={e => setNewSubjectName(e.target.value)} />
+              <button className="btn-primary" onClick={addSubject} disabled={isCreating}>
+                <Plus size={18} /> {isCreating ? "同步雲端中..." : "建立新科目"}
+              </button>
+              
+              <button className="btn-secondary" onClick={() => setShowEmbedSheet(!showEmbedSheet)}>
+                {showEmbedSheet ? <><Minimize2 size={18} /> 關閉試算表預覽</> : <><Maximize2 size={18} /> 檢視/編輯原始試算表</>}
+              </button>
+              
+              <a href={SPREADSHEET_URL} target="_blank" rel="noopener noreferrer" style={{textDecoration: 'none'}}>
+                <button className="btn-secondary">
+                  <ExternalLink size={18} /> 在新視窗開啟 Google 試算表
+                </button>
+              </a>
+
+              <button className="btn-secondary" style={{marginTop: '10px', color: '#f87171'}} onClick={() => {setIsLoggedIn(false); setIsAdminMode(false);}}>
+                <LogOut size={18} /> 退出管理後台
+              </button>
+            </div>
           </div>
 
-          <div style={{borderTop: '2px dashed #f1f5f9', paddingTop: '20px'}}>
-            <p style={{fontSize: '14px', color: '#64748b', fontWeight: 800, marginBottom: '12px'}}>新增考試科目</p>
-            <input className="input-ui" style={{marginBottom: '10px'}} placeholder="請輸入新科目名稱" value={newSubjectName} onChange={e => setNewSubjectName(e.target.value)} />
-            <button className="btn-primary" onClick={addSubject} disabled={isCreating}>{isCreating ? "同步雲端中..." : "新增並同步雲端"}</button>
-            <button className="btn-primary" style={{background: '#f1f5f9', color: '#64748b', marginTop: '10px'}} onClick={() => {setIsLoggedIn(false); setIsAdminMode(false);}}>退出管理後台</button>
-          </div>
+          {/* 內嵌試算表區域 */}
+          {showEmbedSheet && (
+            <div className="embed-container" style={{animation: 'popUp 0.4s ease'}}>
+              <iframe 
+                src={SPREADSHEET_EMBED_URL} 
+                style={{ width: '100%', height: '100%', border: 'none' }}
+                title="Google Spreadsheet Admin"
+              />
+            </div>
+          )}
         </div>
       </div>
     );
@@ -258,11 +302,11 @@ const App = () => {
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
                   <div>
                     <span style={{fontSize: '12px', color: '#94a3b8', fontWeight: 700, display: 'block', marginBottom: '2px'}}>STUDENT NAME</span>
-                    <h2 style={{margin: 0, fontSize: '24px', fontWeight: 900}}>{queryResult.姓名 ?? queryResult.name}</h2>
+                    <h2 style={{margin: 0, fontSize: '24px', fontWeight: 900}}>{String(queryResult.姓名 ?? queryResult.name)}</h2>
                   </div>
                   <div style={{textAlign: 'right'}}>
                     <span style={{fontSize: '12px', color: '#94a3b8', fontWeight: 700, display: 'block', marginBottom: '2px'}}>ID NUMBER</span>
-                    <div style={{background: '#f1f5f9', padding: '4px 12px', borderRadius: '10px', fontWeight: 700, color: '#475569'}}>{queryResult.學號 ?? queryResult.studentId}</div>
+                    <div style={{background: '#f1f5f9', padding: '4px 12px', borderRadius: '10px', fontWeight: 700, color: '#475569'}}>{String(queryResult.學號 ?? queryResult.studentId)}</div>
                   </div>
                 </div>
                 <div className="score-box">
